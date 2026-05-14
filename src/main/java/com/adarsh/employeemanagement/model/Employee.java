@@ -1,4 +1,4 @@
-package com.adarsh.employeemanagement;
+package com.adarsh.employeemanagement.model;
 
 public class Employee {
 
@@ -14,7 +14,7 @@ public class Employee {
 
     public int getId() {
         return id;
-    }
+    }  
 
     public String getName() {
         return name;
