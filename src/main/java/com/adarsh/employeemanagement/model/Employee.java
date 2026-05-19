@@ -1,7 +1,12 @@
 package com.adarsh.employeemanagement.model;
 
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 
 @Entity
 public class Employee {
@@ -12,6 +17,10 @@ public class Employee {
     private String name;
 
     private String department;
+
+    @OneToMany(mappedBy = "employee")
+    @JsonIgnore
+    private List<Task> tasks;
 
     public Employee() {
 
@@ -46,5 +55,13 @@ public class Employee {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public List<Task> getTasks() {
+        return tasks;
+    }
+
+    public void setTasks(List<Task> tasks) {
+        this.tasks = tasks;
     }
 }
