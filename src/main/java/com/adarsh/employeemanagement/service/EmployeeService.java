@@ -1,65 +1,43 @@
 package com.adarsh.employeemanagement.service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import com.adarsh.employeemanagement.model.Employee;
+import com.adarsh.employeemanagement.repository.EmployeeRepository;
 
 @Service
 public class EmployeeService {
 
-    List<Employee> employees = new ArrayList<>();
+    private EmployeeRepository employeeRepository;
 
-    public EmployeeService() {
+    public EmployeeService(EmployeeRepository employeeRepository) {
 
-        employees.add(new Employee(1, "Adarsh", "IT"));
-        employees.add(new Employee(2, "Rahul", "HR"));
-        employees.add(new Employee(3, "Amit", "Finance"));
+        this.employeeRepository = employeeRepository;
     }
 
     public List<Employee> getEmployees() {
 
-        return employees;
+        return employeeRepository.findAll();
     }
-    
+
     public Employee addEmployee(Employee employee) {
 
-        employees.add(employee);
-
-        return employee;
+        return employeeRepository.save(employee);
     }
-    
+
     public Employee updateEmployee(int id, Employee updatedEmployee) {
 
-        for (Employee employee : employees) {
+        updatedEmployee.setId(id);
 
-            if (employee.getId() == id) {
-
-                employee.setName(updatedEmployee.getName());
-
-                employee.setDepartment(updatedEmployee.getDepartment());
-
-                return employee;
-            }
-        }
-
-        return null;
+        return employeeRepository.save(updatedEmployee);
     }
-    
+
     public String deleteEmployee(int id) {
 
-        for (Employee employee : employees) {
+        employeeRepository.deleteById(id);
 
-            if (employee.getId() == id) {
-
-                employees.remove(employee);
-
-                return "Employee deleted successfully";
-            }
-        }
-
-        return "Employee not found";
+        return "Employee deleted successfully";
     }
 }
