@@ -1,4 +1,4 @@
-package com.adarsh.employeemanagement;
+package com.adarsh.employeemanagement.model;
 
 public class Employee {
 
@@ -22,5 +22,17 @@ public class Employee {
 
     public String getDepartment() {
         return department;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
     }
 }
