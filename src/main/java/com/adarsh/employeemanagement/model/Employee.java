@@ -14,7 +14,7 @@ public class Employee {
 
     public int getId() {
         return id;
-    }  
+    }
 
     public String getName() {
         return name;
@@ -22,5 +22,17 @@ public class Employee {
 
     public String getDepartment() {
         return department;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
     }
 }

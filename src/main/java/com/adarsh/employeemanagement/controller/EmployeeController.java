@@ -3,7 +3,10 @@ package com.adarsh.employeemanagement.controller;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,4 +38,38 @@ public class EmployeeController {
 
         return employee;
     }
-}
+    
+    @PutMapping("/employees/{id}")
+    public Employee updateEmployee(@PathVariable int id,
+                                   @RequestBody Employee updatedEmployee) {
+
+        for (Employee employee : employees) {
+
+            if (employee.getId() == id) {
+
+                employee.setName(updatedEmployee.getName());
+                employee.setDepartment(updatedEmployee.getDepartment());
+
+                return employee;
+            }
+        }
+
+        return null;
+    }
+    
+    @DeleteMapping("/employees/{id}")
+    public String deleteEmployee(@PathVariable int id) {
+
+        for (Employee employee : employees) {
+
+            if (employee.getId() == id) {
+
+                employees.remove(employee);
+
+                return "Employee deleted successfully";
+            }
+        }
+
+        return "Employee not found";
+    }
+}  
