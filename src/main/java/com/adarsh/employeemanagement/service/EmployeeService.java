@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.adarsh.employeemanagement.exception.ResourceNotFoundException;
 import com.adarsh.employeemanagement.model.Employee;
 import com.adarsh.employeemanagement.repository.EmployeeRepository;
 
@@ -29,12 +30,24 @@ public class EmployeeService {
 
     public Employee updateEmployee(int id, Employee updatedEmployee) {
 
+        if (!employeeRepository.existsById(id)) {
+
+            throw new ResourceNotFoundException(
+                    "Employee not found with id " + id);
+        }
+
         updatedEmployee.setId(id);
 
         return employeeRepository.save(updatedEmployee);
     }
 
     public String deleteEmployee(int id) {
+
+        if (!employeeRepository.existsById(id)) {
+
+            throw new ResourceNotFoundException(
+                    "Employee not found with id " + id);
+        }
 
         employeeRepository.deleteById(id);
 

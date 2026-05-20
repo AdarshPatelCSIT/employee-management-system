@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 public class Employee {
@@ -14,8 +15,10 @@ public class Employee {
     @Id
     private int id;
 
+    @NotBlank(message = "Name cannot be empty")
     private String name;
 
+    @NotBlank(message = "Department cannot be empty")
     private String department;
 
     @OneToMany(mappedBy = "employee")
