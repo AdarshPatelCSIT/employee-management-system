@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,37 +23,54 @@ public class EmployeeController {
 
     private EmployeeService employeeService;
 
-    public EmployeeController(EmployeeService employeeService) {
+    public EmployeeController(
+            EmployeeService employeeService) {
 
-        this.employeeService = employeeService;
+        this.employeeService =
+                employeeService;
     }
 
     @GetMapping("/employees")
-    public ResponseEntity<List<Employee>> getEmployees() {
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<Employee>>
+           getEmployees() {
 
-        return ResponseEntity.ok(employeeService.getEmployees());
+        return ResponseEntity.ok(
+                employeeService.getEmployees());
     }
 
     @PostMapping("/employees")
-    public ResponseEntity<Employee> addEmployee(
-            @Valid @RequestBody Employee employee) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Employee>
+           addEmployee(
+           @Valid @RequestBody Employee employee) {
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                             .body(employeeService.addEmployee(employee));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(
+                    employeeService
+                    .addEmployee(employee));
     }
 
     @PutMapping("/employees/{id}")
-    public ResponseEntity<Employee> updateEmployee(
-            @PathVariable int id,
-            @Valid @RequestBody Employee updatedEmployee) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Employee>
+           updateEmployee(
+           @PathVariable int id,
+           @Valid @RequestBody
+           Employee updatedEmployee) {
 
         return ResponseEntity.ok(
-                employeeService.updateEmployee(id, updatedEmployee));
+                employeeService.updateEmployee(
+                        id,
+                        updatedEmployee));
     }
 
     @DeleteMapping("/employees/{id}")
-    public ResponseEntity<String> deleteEmployee(
-            @PathVariable int id) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String>
+           deleteEmployee(
+           @PathVariable int id) {
 
         return ResponseEntity.ok(
                 employeeService.deleteEmployee(id));
