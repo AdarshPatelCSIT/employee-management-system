@@ -10,6 +10,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,11 +40,13 @@ public class JwtAuthenticationFilter
 
         if (path.equals("/register")
                 || path.equals("/auth/login")
+                || path.equals("/refresh-token")
+                || path.equals("/reset-password")
                 || path.equals("/send-email")
                 || path.equals("/send-otp")
                 || path.equals("/verify-otp")
-                || path.equals("/reset-password")
-                || path.equals("/refresh-token")) {
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")) {
 
             filterChain.doFilter(
                     request,
@@ -66,43 +69,55 @@ public class JwtAuthenticationFilter
             return;
         }
 
-        String token =
-                authHeader.substring(7);
+        try {
 
-        String username =
-                jwtService.extractUsername(token);
+            String token =
+                    authHeader.substring(7);
 
-        String role =
-                jwtService.extractRole(token);
+            String username =
+                    jwtService.extractUsername(
+                            token);
 
-        if (username != null
-                && SecurityContextHolder
-                .getContext()
-                .getAuthentication() == null) {
+            String role =
+                    jwtService.extractRole(
+                            token);
 
-            if (jwtService.isTokenValid(
-                    token,
-                    username)) {
+            if (username != null
+                    && SecurityContextHolder
+                    .getContext()
+                    .getAuthentication() == null) {
 
-                SimpleGrantedAuthority authority =
-                        new SimpleGrantedAuthority(
-                                "ROLE_" + role);
+                if (jwtService.isTokenValid(
+                        token,
+                        username)) {
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                username,
-                                null,
-                                Collections.singletonList(
-                                        authority));
+                    SimpleGrantedAuthority authority =
+                            new SimpleGrantedAuthority(
+                                    role);
 
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request));
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    username,
+                                    null,
+                                    Collections.singletonList(
+                                            authority));
 
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authToken);
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request));
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(authToken);
+                }
             }
+
+        } catch (ExpiredJwtException e) {
+
+            response.setStatus(
+                    HttpServletResponse.SC_UNAUTHORIZED);
+
+            return;
         }
 
         filterChain.doFilter(

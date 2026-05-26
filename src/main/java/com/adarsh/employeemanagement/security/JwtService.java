@@ -5,47 +5,44 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.stereotype.Service;
+
+import com.adarsh.employeemanagement.model.User;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
 
     private static final String SECRET_KEY =
-            "mysecretkeymysecretkeymysecretkey12";
-
-    private Key getSigningKey() {
-
-        return new SecretKeySpec(
-                SECRET_KEY.getBytes(),
-                SignatureAlgorithm.HS256
-                        .getJcaName());
-    }
+            "mysecuresecretkeymysecuresecretkey12345678";
 
     public String generateToken(
-            String username,
-            String role) {
+            User user) {
 
         Map<String, Object> claims =
                 new HashMap<>();
 
-        claims.put("role", role);
+        claims.put(
+                "role",
+                "ROLE_" + user.getRole());
 
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(username)
-                .setIssuedAt(new Date())
+                .setSubject(
+                        user.getUsername())
+                .setIssuedAt(
+                        new Date(System.currentTimeMillis()))
                 .setExpiration(
                         new Date(
-                            System.currentTimeMillis()
-                            + 1000 * 60 * 15))
+                                System.currentTimeMillis()
+                                + 1000 * 60 * 15))
                 .signWith(
-                        getSigningKey(),
+                        getSignInKey(),
                         SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -55,13 +52,14 @@ public class JwtService {
 
         return Jwts.builder()
                 .setSubject(username)
-                .setIssuedAt(new Date())
+                .setIssuedAt(
+                        new Date(System.currentTimeMillis()))
                 .setExpiration(
                         new Date(
-                            System.currentTimeMillis()
-                            + 1000L * 60 * 60 * 24 * 7))
+                                System.currentTimeMillis()
+                                + 1000L * 60 * 60 * 24 * 7))
                 .signWith(
-                        getSigningKey(),
+                        getSignInKey(),
                         SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -84,8 +82,10 @@ public class JwtService {
             String token,
             String username) {
 
-        return extractUsername(token)
-                .equals(username)
+        final String extractedUsername =
+                extractUsername(token);
+
+        return extractedUsername.equals(username)
                 && !isTokenExpired(token);
     }
 
@@ -102,9 +102,18 @@ public class JwtService {
 
         return Jwts.parserBuilder()
                 .setSigningKey(
-                        getSigningKey())
+                        getSignInKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    private Key getSignInKey() {
+
+        byte[] keyBytes =
+                SECRET_KEY.getBytes();
+
+        return Keys.hmacShaKeyFor(
+                keyBytes);
     }
 }

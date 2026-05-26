@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.adarsh.employeemanagement.dto.AuthResponse;
 import com.adarsh.employeemanagement.dto.LoginRequest;
+import com.adarsh.employeemanagement.dto.RefreshTokenRequest;
 import com.adarsh.employeemanagement.dto.ResetPasswordRequest;
-import com.adarsh.employeemanagement.exception.ResourceNotFoundException;
 import com.adarsh.employeemanagement.model.User;
 import com.adarsh.employeemanagement.repository.UserRepository;
 import com.adarsh.employeemanagement.security.JwtService;
@@ -30,10 +30,17 @@ public class UserService {
             JwtService jwtService,
             OtpService otpService) {
 
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.otpService = otpService;
+        this.userRepository =
+                userRepository;
+
+        this.passwordEncoder =
+                passwordEncoder;
+
+        this.jwtService =
+                jwtService;
+
+        this.otpService =
+                otpService;
     }
 
     public List<User> getUsers() {
@@ -41,54 +48,92 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public User registerUser(User user) {
+    public String registerUser(
+            User user) {
 
-        boolean isVerified =
-                otpService.isEmailVerified(
-                        user.getEmail());
+        boolean usernameExists =
+                userRepository
+                .findByUsername(
+                        user.getUsername())
+                .isPresent();
 
-        if (!isVerified) {
+        if (usernameExists) {
 
             throw new RuntimeException(
-                    "Email not verified with OTP");
+                    "Username already exists");
+        }
+
+        boolean emailExists =
+                userRepository
+                .findByEmail(
+                        user.getEmail())
+                .isPresent();
+
+        if (emailExists) {
+
+            throw new RuntimeException(
+                    "Email already exists");
         }
 
         user.setPassword(
                 passwordEncoder.encode(
                         user.getPassword()));
 
-        return userRepository.save(user);
+        userRepository.save(user);
+
+        return "User registered successfully";
     }
 
     public AuthResponse loginUser(
-            LoginRequest loginRequest) {
+            LoginRequest request) {
 
-        String loginInput =
-                loginRequest.getUsername().trim();
-
-        User user = userRepository
+        User user =
+                userRepository
                 .findByUsernameOrEmail(
-                        loginInput,
-                        loginInput)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
+                        request.getUsername(),
+                        request.getUsername())
+                .orElseThrow(
+                        () -> new RuntimeException(
                                 "User not found"));
 
-        boolean passwordMatches =
-                passwordEncoder.matches(
-                        loginRequest.getPassword(),
-                        user.getPassword());
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())) {
 
-        if (!passwordMatches) {
-
-            throw new ResourceNotFoundException(
+            throw new RuntimeException(
                     "Invalid password");
         }
 
         String accessToken =
-                jwtService.generateToken(
-                        user.getUsername(),
-                        user.getRole());
+                jwtService.generateToken(user);
+
+        String refreshToken =
+                jwtService.generateRefreshToken(
+                        user.getUsername());
+
+        return new AuthResponse(
+                accessToken,
+                refreshToken);
+    }
+
+    public AuthResponse refreshToken(
+            RefreshTokenRequest request) {
+
+        String username =
+                jwtService.extractUsername(
+                        request.getRefreshToken());
+
+        User user =
+                userRepository
+                .findByUsernameOrEmail(
+                        username,
+                        username)
+                .orElseThrow(
+                        () -> new RuntimeException(
+                                "User not found"));
+
+        String accessToken =
+                jwtService.generateToken(user);
 
         String refreshToken =
                 jwtService.generateRefreshToken(
@@ -111,11 +156,12 @@ public class UserService {
             return "OTP verification required!";
         }
 
-        User user = userRepository
+        User user =
+                userRepository
                 .findByEmail(
                         request.getEmail())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
+                .orElseThrow(
+                        () -> new RuntimeException(
                                 "User not found"));
 
         user.setPassword(
@@ -124,6 +170,6 @@ public class UserService {
 
         userRepository.save(user);
 
-        return "Password reset successful!";
+        return "Password reset successful";
     }
 }

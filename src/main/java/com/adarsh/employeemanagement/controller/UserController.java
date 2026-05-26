@@ -12,7 +12,6 @@ import com.adarsh.employeemanagement.dto.LoginRequest;
 import com.adarsh.employeemanagement.dto.RefreshTokenRequest;
 import com.adarsh.employeemanagement.dto.ResetPasswordRequest;
 import com.adarsh.employeemanagement.model.User;
-import com.adarsh.employeemanagement.security.JwtService;
 import com.adarsh.employeemanagement.service.UserService;
 
 @RestController
@@ -20,17 +19,11 @@ public class UserController {
 
     private UserService userService;
 
-    private JwtService jwtService;
-
     public UserController(
-            UserService userService,
-            JwtService jwtService) {
+            UserService userService) {
 
         this.userService =
                 userService;
-
-        this.jwtService =
-                jwtService;
     }
 
     @GetMapping("/users")
@@ -40,7 +33,7 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public User registerUser(
+    public String registerUser(
             @RequestBody User user) {
 
         return userService.registerUser(user);
@@ -63,16 +56,11 @@ public class UserController {
     }
 
     @PostMapping("/refresh-token")
-    public String refreshToken(
+    public AuthResponse refreshToken(
             @RequestBody
             RefreshTokenRequest request) {
 
-        String username =
-                jwtService.extractUsername(
-                        request.getRefreshToken());
-
-        return jwtService.generateToken(
-                username,
-                "ADMIN");
+        return userService.refreshToken(
+                request);
     }
 }

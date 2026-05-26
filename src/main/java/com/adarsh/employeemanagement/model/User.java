@@ -1,5 +1,8 @@
 package com.adarsh.employeemanagement.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.Email;
@@ -11,14 +14,18 @@ public class User {
     @Id
     private int id;
 
+    @Column(unique = true)
     @NotBlank(message = "Username cannot be empty")
     private String username;
 
+    @Column(unique = true)
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email cannot be empty")
     private String email;
 
     @NotBlank(message = "Password cannot be empty")
+    @JsonProperty(
+        access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @NotBlank(message = "Role cannot be empty")
