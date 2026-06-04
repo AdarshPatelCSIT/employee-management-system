@@ -12,4 +12,8 @@ public interface EmployeeRepository
     List<Employee>
     findByNameContainingIgnoreCase(
             String name);
+    
+    List<Employee>
+    findByManagerId(
+            int managerId);
 }

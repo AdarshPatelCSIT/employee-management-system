@@ -1,9 +1,15 @@
 package com.adarsh.employeemanagement.model;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.adarsh.employeemanagement.model.enums.TaskPriority;
+import com.adarsh.employeemanagement.model.enums.TaskStatus;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,10 +24,19 @@ public class Task {
     private int id;
 
     private String title;
+    
+    @ManyToOne
+    private Project project;
+
+    private LocalDate dueDate;
 
     private String description;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private TaskPriority priority;
+
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status;
 
     private LocalDateTime assignedAt;
 
@@ -37,7 +52,8 @@ public class Task {
 
     public Task() {
 
-        this.status = "PENDING";
+        this.status =
+                TaskStatus.PENDING;
 
         this.assignedAt =
                 LocalDateTime.now();
@@ -48,7 +64,8 @@ public class Task {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(
+            int id) {
 
         this.id = id;
     }
@@ -64,6 +81,18 @@ public class Task {
         this.title = title;
     }
 
+    public LocalDate getDueDate() {
+
+        return dueDate;
+    }
+
+    public void setDueDate(
+            LocalDate dueDate) {
+
+        this.dueDate =
+                dueDate;
+    }
+
     public String getDescription() {
 
         return description;
@@ -76,20 +105,33 @@ public class Task {
                 description;
     }
 
-    public String getStatus() {
+    public TaskPriority getPriority() {
+
+        return priority;
+    }
+
+    public void setPriority(
+            TaskPriority priority) {
+
+        this.priority =
+                priority;
+    }
+
+    public TaskStatus getStatus() {
 
         return status;
     }
 
     public void setStatus(
-            String status) {
+            TaskStatus status) {
 
-        this.status = status;
+        this.status =
+                status;
 
         this.updatedAt =
                 LocalDateTime.now();
 
-        if ("COMPLETED".equals(status)) {
+        if (status == TaskStatus.COMPLETED) {
 
             this.completedAt =
                     LocalDateTime.now();
@@ -154,6 +196,17 @@ public class Task {
 
         this.assignedBy =
                 assignedBy;
+    }
+    
+    public Project getProject() {
+
+        return project;
+    }
+
+    public void setProject(
+            Project project) {
+
+        this.project = project;
     }
 
     public String getTaskDuration() {

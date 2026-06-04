@@ -18,4 +18,7 @@ public interface UserRepository
 
     Optional<User> findByUsername(
             String username);
+    
+    long countByRole(
+            String role);
 }

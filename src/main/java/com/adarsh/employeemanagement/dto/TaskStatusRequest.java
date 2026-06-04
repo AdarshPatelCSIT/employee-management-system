@@ -1,20 +1,22 @@
 package com.adarsh.employeemanagement.dto;
 
+import com.adarsh.employeemanagement.model.enums.TaskStatus;
+
 public class TaskStatusRequest {
 
-    private String status;
+    private TaskStatus status;
 
     public TaskStatusRequest() {
 
     }
 
-    public String getStatus() {
+    public TaskStatus getStatus() {
 
         return status;
     }
 
     public void setStatus(
-            String status) {
+            TaskStatus status) {
 
         this.status = status;
     }

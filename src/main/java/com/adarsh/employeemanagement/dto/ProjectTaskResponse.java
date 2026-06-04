@@ -5,13 +5,15 @@ import java.time.LocalDate;
 import com.adarsh.employeemanagement.model.enums.TaskPriority;
 import com.adarsh.employeemanagement.model.enums.TaskStatus;
 
-public class TaskRequest {
+public class ProjectTaskResponse {
+
+    private int taskId;
 
     private String title;
-    
-    private int projectId;
 
-    private String description;
+    private String employeeName;
+
+    private String managerName;
 
     private TaskStatus status;
 
@@ -19,10 +21,23 @@ public class TaskRequest {
 
     private LocalDate dueDate;
 
-    private int employeeId;
+    private String taskDuration;
 
-    public TaskRequest() {
+    public ProjectTaskResponse() {
 
+    }
+
+    // Generate getters/setters
+    
+    public int getTaskId() {
+
+        return taskId;
+    }
+
+    public void setTaskId(
+            int taskId) {
+
+        this.taskId = taskId;
     }
 
     public String getTitle() {
@@ -36,16 +51,28 @@ public class TaskRequest {
         this.title = title;
     }
 
-    public String getDescription() {
+    public String getEmployeeName() {
 
-        return description;
+        return employeeName;
     }
 
-    public void setDescription(
-            String description) {
+    public void setEmployeeName(
+            String employeeName) {
 
-        this.description =
-                description;
+        this.employeeName =
+                employeeName;
+    }
+
+    public String getManagerName() {
+
+        return managerName;
+    }
+
+    public void setManagerName(
+            String managerName) {
+
+        this.managerName =
+                managerName;
     }
 
     public TaskStatus getStatus() {
@@ -83,26 +110,15 @@ public class TaskRequest {
                 dueDate;
     }
 
-    public int getEmployeeId() {
+    public String getTaskDuration() {
 
-        return employeeId;
+        return taskDuration;
     }
 
-    public void setEmployeeId(
-            int employeeId) {
+    public void setTaskDuration(
+            String taskDuration) {
 
-        this.employeeId =
-                employeeId;
-    }
-    
-    public int getProjectId() {
-
-        return projectId;
-    }
-
-    public void setProjectId(
-            int projectId) {
-
-        this.projectId = projectId;
+        this.taskDuration =
+                taskDuration;
     }
 }

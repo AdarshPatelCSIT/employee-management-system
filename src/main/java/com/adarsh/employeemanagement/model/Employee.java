@@ -8,13 +8,18 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.ManyToOne;
 
 @Entity
 public class Employee {
 
     @Id
     private int id;
-
+    
+    
+    @ManyToOne
+    private User manager;
+    
     private String name;
 
     private String department;
@@ -79,5 +84,16 @@ public class Employee {
             List<Task> tasks) {
 
         this.tasks = tasks;
+    }
+    
+    public User getManager() {
+
+        return manager;
+    }
+
+    public void setManager(
+            User manager) {
+
+        this.manager = manager;
     }
 }

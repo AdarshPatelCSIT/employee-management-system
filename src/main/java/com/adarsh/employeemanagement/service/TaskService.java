@@ -1,21 +1,47 @@
 package com.adarsh.employeemanagement.service;
-import java.time.LocalDateTime;
-import com.adarsh.employeemanagement.dto.DashboardResponse;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
-import com.adarsh.employeemanagement.dto.EmployeeDashboardResponse;
 
-import com.adarsh.employeemanagement.dto.TaskResponse;
+import java.util.List;
+import com.adarsh.employeemanagement.dto.CommentResponse;
+import com.adarsh.employeemanagement.model.Project;
+import com.adarsh.employeemanagement.repository.ProjectRepository;
+import com.adarsh.employeemanagement.dto.CommentRequest;
+import com.adarsh.employeemanagement.model.TaskComment;
+import com.adarsh.employeemanagement.repository.TaskCommentRepository;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import com.adarsh.employeemanagement.dto.ActivityResponse;
+import com.adarsh.employeemanagement.model.TaskActivity;
+import com.adarsh.employeemanagement.repository.TaskActivityRepository;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.adarsh.employeemanagement.dto.AttachmentResponse;
+import com.adarsh.employeemanagement.model.TaskAttachment;
+import com.adarsh.employeemanagement.repository.TaskAttachmentRepository;
+import java.time.LocalDate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.springframework.data.domain.Sort;
+import java.util.stream.Collectors;
+import com.adarsh.employeemanagement.dto.OverdueTaskResponse;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.adarsh.employeemanagement.dto.DashboardResponse;
+import com.adarsh.employeemanagement.dto.EmployeeDashboardResponse;
 import com.adarsh.employeemanagement.dto.TaskRequest;
+import com.adarsh.employeemanagement.dto.TaskResponse;
 import com.adarsh.employeemanagement.model.Employee;
 import com.adarsh.employeemanagement.model.Task;
 import com.adarsh.employeemanagement.model.User;
+import com.adarsh.employeemanagement.model.enums.TaskStatus;
 import com.adarsh.employeemanagement.repository.EmployeeRepository;
 import com.adarsh.employeemanagement.repository.TaskRepository;
 import com.adarsh.employeemanagement.repository.UserRepository;
@@ -24,24 +50,62 @@ import com.adarsh.employeemanagement.repository.UserRepository;
 public class TaskService {
 
     private TaskRepository taskRepository;
+    
+    private TaskActivityRepository
+    taskActivityRepository;
+    
+    private NotificationService
+    notificationService;
+    
+    private TaskCommentRepository
+    taskCommentRepository;
 
     private EmployeeRepository employeeRepository;
 
     private UserRepository userRepository;
+    
+    private TaskAttachmentRepository
+    taskAttachmentRepository;
+    
+    private ProjectRepository
+    projectRepository;
 
     public TaskService(
+    		ProjectRepository
+    		projectRepository,
+    		TaskAttachmentRepository
+    		taskAttachmentRepository,
+    		TaskActivityRepository
+    		taskActivityRepository,
             TaskRepository taskRepository,
             EmployeeRepository employeeRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            TaskCommentRepository taskCommentRepository,
+            NotificationService notificationService) {
+    	
+    	this.projectRepository =
+    	        projectRepository;
 
         this.taskRepository =
                 taskRepository;
+        
+        this.taskActivityRepository =
+                taskActivityRepository;
+        
+        this.taskAttachmentRepository =
+                taskAttachmentRepository;
 
         this.employeeRepository =
                 employeeRepository;
 
         this.userRepository =
                 userRepository;
+
+        this.taskCommentRepository =
+                taskCommentRepository;
+        
+        this.notificationService =
+                notificationService;
     }
 
     public List<Task> getTasks() {
@@ -49,6 +113,69 @@ public class TaskService {
         return taskRepository.findAll();
     }
     
+    public CommentResponse
+    addComment(
+    int taskId,
+    CommentRequest request) {
+
+ Task task =
+         taskRepository
+         .findById(taskId)
+         .orElseThrow(
+             () -> new RuntimeException(
+                 "Task not found"));
+
+ Authentication authentication =
+         SecurityContextHolder
+         .getContext()
+         .getAuthentication();
+
+ String username =
+         authentication.getName();
+
+ User user =
+         userRepository
+         .findByUsername(username)
+         .orElseThrow(
+             () -> new RuntimeException(
+                 "User not found"));
+
+ TaskComment comment =
+         new TaskComment();
+
+ comment.setComment(
+         request.getComment());
+
+ comment.setTask(task);
+
+ comment.setCommentedBy(user);
+
+ TaskComment savedComment =
+	        taskCommentRepository
+	        .save(comment);
+ 
+ createActivity(
+	        task,
+	        user,
+	        "Added comment");
+
+	return convertToCommentResponse(
+	        savedComment);
+}
+    
+    public List<CommentResponse>
+    getTaskComments(
+    int taskId) {
+
+ List<TaskComment> comments =
+         taskCommentRepository
+         .findByTaskIdOrderByCommentedAtAsc(
+                 taskId);
+
+ return comments.stream()
+         .map(this::convertToCommentResponse)
+         .toList();
+}
     public List<Task> getMyTasks() {
 
         Authentication authentication =
@@ -98,7 +225,7 @@ public class TaskService {
                         user.getId(),
                         dateTime);
     }
-    
+
     public List<Task> getMyTaskHistoryByRange(
             LocalDate startDate,
             LocalDate endDate) {
@@ -130,41 +257,26 @@ public class TaskService {
                         startDateTime,
                         endDateTime);
     }
-    
+
     public List<TaskResponse>
-    getEmployeeTasksByStatus(
-    int employeeId,
-    String status) {
+           getEmployeeTasksByStatus(
+           int employeeId,
+           TaskStatus status) {
 
- List<Task> tasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 employeeId,
-                 status);
+        List<Task> tasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        employeeId,
+                        status);
 
- return tasks.stream()
-         .map(task -> {
+        return tasks.stream()
+                .map(this::convertToTaskResponse)
+                .toList();
+    }
 
-             TaskResponse response =
-                     new TaskResponse();
-
-             response.setTitle(
-                     task.getTitle());
-
-             response.setStatus(
-                     task.getStatus());
-
-             response.setTaskDuration(
-                     task.getTaskDuration());
-
-             return response;
-
-         }).toList();
-}
-    
     public Task updateMyTaskStatus(
             int taskId,
-            String status) {
+            TaskStatus status) {
 
         Authentication authentication =
                 SecurityContextHolder
@@ -197,11 +309,16 @@ public class TaskService {
         }
 
         task.setStatus(status);
+        createActivity(
+                task,
+                user,
+                "Changed status to "
+                + status);
 
         return taskRepository.save(task);
     }
-    
-    public Task addTask(
+
+    public TaskResponse addTask(
             TaskRequest taskRequest) {
 
         Employee employee =
@@ -211,6 +328,14 @@ public class TaskService {
                 .orElseThrow(
                     () -> new RuntimeException(
                         "Employee not found"));
+        
+        Project project =
+                projectRepository
+                .findById(
+                    taskRequest.getProjectId())
+                .orElseThrow(
+                    () -> new RuntimeException(
+                        "Project not found"));
 
         Authentication authentication =
                 SecurityContextHolder
@@ -218,7 +343,7 @@ public class TaskService {
                 .getAuthentication();
 
         String username =
-                authentication.getName();
+                authentication.getName(); 
 
         User manager =
                 userRepository
@@ -226,6 +351,13 @@ public class TaskService {
                 .orElseThrow(
                     () -> new RuntimeException(
                         "User not found"));
+        
+        if (taskRequest.getDueDate()
+                .isBefore(LocalDate.now())) {
+
+            throw new RuntimeException(
+                    "Due date cannot be in the past");
+        }
 
         Task task = new Task();
 
@@ -238,74 +370,141 @@ public class TaskService {
         task.setStatus(
                 taskRequest.getStatus());
 
+        task.setPriority(
+                taskRequest.getPriority());
+
+        task.setDueDate(
+                taskRequest.getDueDate());
+
         task.setAssignedEmployee(
                 employee);
+
+        task.setProject(
+                project);
 
         task.setAssignedBy(
                 manager);
 
-        return taskRepository.save(task);
+        Task savedTask =
+                taskRepository.save(task);
+
+        createActivity(
+                savedTask,
+                manager,
+                "Created task: "
+                + savedTask.getTitle());
+
+        return convertToResponse(
+                savedTask);
     }
 
-    public DashboardResponse
-    getMyDashboard() {
+    private TaskResponse
+    convertToResponse(
+    Task task) {
 
- Authentication authentication =
-         SecurityContextHolder
-         .getContext()
-         .getAuthentication();
+TaskResponse response =
+        new TaskResponse();
 
- String username =
-         authentication.getName();
+response.setTitle(
+        task.getTitle());
 
- User user =
-         userRepository
-         .findByUsername(username)
-         .orElseThrow(
-             () -> new RuntimeException(
-                 "User not found"));
+response.setStatus(
+        task.getStatus());
 
- List<Task> allTasks =
-         taskRepository
-         .findByAssignedEmployeeId(
-                 user.getId());
+response.setPriority(
+        task.getPriority());
 
- List<Task> completedTasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 user.getId(),
-                 "COMPLETED");
+response.setDueDate(
+        task.getDueDate());
 
- List<Task> pendingTasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 user.getId(),
-                 "PENDING");
+response.setTaskDuration(
+        task.getTaskDuration());
 
- List<Task> inProgressTasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 user.getId(),
-                 "IN_PROGRESS");
+if (task.getProject() != null) {
 
- DashboardResponse response =
-         new DashboardResponse();
+    response.setProjectName(
+            task.getProject()
+                .getName());
+}
 
- response.setTotalTasks(
-         allTasks.size());
+if (task.getAssignedEmployee()
+        != null) {
 
- response.setCompletedTasks(
-         completedTasks.size());
+    response.setEmployeeName(
+            task.getAssignedEmployee()
+                .getName());
+}
 
- response.setPendingTasks(
-         pendingTasks.size());
+if (task.getAssignedBy()
+        != null) {
 
- response.setInProgressTasks(
-         inProgressTasks.size());
+    response.setManagerName(
+            task.getAssignedBy()
+                .getUsername());
+}
 
- return response;
+return response;
 }
     
+    public DashboardResponse
+           getMyDashboard() {
+
+        Authentication authentication =
+                SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        String username =
+                authentication.getName();
+
+        User user =
+                userRepository
+                .findByUsername(username)
+                .orElseThrow(
+                    () -> new RuntimeException(
+                        "User not found"));
+
+        List<Task> allTasks =
+                taskRepository
+                .findByAssignedEmployeeId(
+                        user.getId());
+
+        List<Task> completedTasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        user.getId(),
+                        TaskStatus.COMPLETED);
+
+        List<Task> pendingTasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        user.getId(),
+                        TaskStatus.PENDING);
+
+        List<Task> inProgressTasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        user.getId(),
+                        TaskStatus.IN_PROGRESS);
+
+        DashboardResponse response =
+                new DashboardResponse();
+
+        response.setTotalTasks(
+                allTasks.size());
+
+        response.setCompletedTasks(
+                completedTasks.size());
+
+        response.setPendingTasks(
+                pendingTasks.size());
+
+        response.setInProgressTasks(
+                inProgressTasks.size());
+
+        return response;
+    }
+
     public Task updateTask(
             int id,
             Task updatedTask) {
@@ -323,16 +522,54 @@ public class TaskService {
         existingTask.setDescription(
                 updatedTask.getDescription());
 
+        existingTask.setDueDate(
+                updatedTask.getDueDate());
+
         existingTask.setStatus(
                 updatedTask.getStatus());
+
+        existingTask.setPriority(
+                updatedTask.getPriority());
 
         return taskRepository.save(
                 existingTask);
     }
     
-    public List<TaskResponse>
-    getMyTasksByStatus(
-    String status) {
+    private AttachmentResponse
+    convertToAttachmentResponse(
+    TaskAttachment attachment) {
+
+AttachmentResponse response =
+        new AttachmentResponse();
+
+response.setFileName(
+        attachment.getFileName());
+
+response.setFileType(
+        attachment.getFileType());
+
+response.setUploadedBy(
+        attachment.getUploadedBy()
+        .getUsername());
+
+response.setUploadedAt(
+        attachment.getUploadedAt());
+
+return response;
+}
+    
+    public AttachmentResponse
+    uploadAttachment(
+    int taskId,
+    MultipartFile file)
+    throws IOException {
+
+ Task task =
+         taskRepository
+         .findById(taskId)
+         .orElseThrow(
+             () -> new RuntimeException(
+                 "Task not found"));
 
  Authentication authentication =
          SecurityContextHolder
@@ -349,122 +586,374 @@ public class TaskService {
              () -> new RuntimeException(
                  "User not found"));
 
- List<Task> tasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 user.getId(),
-                 status);
+ String uploadDir =
+         "uploads/";
 
- return tasks.stream()
+ Files.createDirectories(
+         Paths.get(uploadDir));
+
+ String fileName =
+	        System.currentTimeMillis()
+	        + "_"
+	        + file.getOriginalFilename()
+	                .replace(" ", "_");
+
+	String filePath =
+	        uploadDir
+	        + fileName;
+
+ Path path =
+         Paths.get(filePath);
+
+ Files.copy(
+         file.getInputStream(),
+         path,
+         StandardCopyOption.REPLACE_EXISTING);
+
+ TaskAttachment attachment =
+         new TaskAttachment();
+
+ attachment.setFileName(
+	        fileName);
+
+ attachment.setFileType(
+         file.getContentType());
+
+ attachment.setFilePath(
+         filePath);
+
+ attachment.setTask(task);
+
+ attachment.setUploadedBy(user);
+
+ TaskAttachment savedAttachment =
+         taskAttachmentRepository
+         .save(attachment);
+ 
+ createActivity(
+	        task,
+	        user,
+	        "Uploaded file: "
+	        + fileName);
+
+ return convertToAttachmentResponse(
+         savedAttachment);
+}
+
+    public List<TaskResponse>
+           getMyTasksByStatus(
+           TaskStatus status) {
+
+        Authentication authentication =
+                SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        String username =
+                authentication.getName();
+
+        User user =
+                userRepository
+                .findByUsername(username)
+                .orElseThrow(
+                    () -> new RuntimeException(
+                        "User not found"));
+
+        List<Task> tasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        user.getId(),
+                        status);
+
+        return tasks.stream()
+                .map(this::convertToTaskResponse)
+                .collect(Collectors.toList());
+    }
+
+    public EmployeeDashboardResponse
+           getEmployeeDashboard(
+           int employeeId) {
+
+        Employee employee =
+                employeeRepository
+                .findById(employeeId)
+                .orElseThrow(
+                    () -> new RuntimeException(
+                        "Employee not found"));
+
+        List<Task> allTasks =
+                taskRepository
+                .findByAssignedEmployeeId(
+                        employeeId);
+
+        List<Task> completedTasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        employeeId,
+                        TaskStatus.COMPLETED);
+
+        List<Task> pendingTasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        employeeId,
+                        TaskStatus.PENDING);
+
+        List<Task> inProgressTasks =
+                taskRepository
+                .findByAssignedEmployeeIdAndStatus(
+                        employeeId,
+                        TaskStatus.IN_PROGRESS);
+
+        EmployeeDashboardResponse response =
+                new EmployeeDashboardResponse();
+
+        response.setEmployeeName(
+                employee.getName());
+
+        response.setTotalTasks(
+                allTasks.size());
+
+        response.setCompletedTasks(
+                completedTasks.size());
+
+        response.setPendingTasks(
+                pendingTasks.size());
+
+        response.setInProgressTasks(
+                inProgressTasks.size());
+
+        response.setCompletedTaskList(
+                completedTasks.stream()
+                .map(this::convertToTaskResponse)
+                .collect(Collectors.toList()));
+
+        response.setPendingTaskList(
+                pendingTasks.stream()
+                .map(this::convertToTaskResponse)
+                .collect(Collectors.toList()));
+
+        response.setInProgressTaskList(
+                inProgressTasks.stream()
+                .map(this::convertToTaskResponse)
+                .collect(Collectors.toList()));
+
+        return response;
+    }
+
+    private TaskResponse
+            convertToTaskResponse(
+            Task task) {
+
+        TaskResponse response =
+                new TaskResponse();
+
+        response.setTitle(
+                task.getTitle());
+
+        response.setStatus(
+                task.getStatus());
+
+        response.setTaskDuration(
+                task.getTaskDuration());
+
+        response.setPriority(
+                task.getPriority());
+
+        response.setDueDate(
+                task.getDueDate());
+
+        return response;
+    }
+    
+    public List<OverdueTaskResponse>
+    getOverdueTasks() {
+
+ List<Task> overdueTasks =
+         taskRepository
+         .findByDueDateBeforeAndStatusNot(
+                 LocalDate.now(),
+                 TaskStatus.COMPLETED);
+
+ return overdueTasks.stream()
          .map(task -> {
 
-             TaskResponse response =
-                     new TaskResponse();
+             OverdueTaskResponse response =
+                     new OverdueTaskResponse();
 
-             response.setTitle(
+             response.setEmployeeName(
+                     task.getAssignedEmployee()
+                     .getName());
+
+             response.setTaskTitle(
                      task.getTitle());
+
+             response.setPriority(
+                     task.getPriority());
 
              response.setStatus(
                      task.getStatus());
 
-             response.setTaskDuration(
-                     task.getTaskDuration());
+             response.setDueDate(
+                     task.getDueDate());
+
+             long overdueDays =
+                     java.time.temporal.ChronoUnit.DAYS
+                     .between(
+                         task.getDueDate(),
+                         LocalDate.now());
+
+             response.setOverdueDays(
+                     overdueDays);
 
              return response;
 
-         }).collect(Collectors.toList());
+         }).toList();
 }
     
-   
-    public EmployeeDashboardResponse
-    getEmployeeDashboard(
-    int employeeId) {
+    public Page<TaskResponse>
+    searchTasks(
+    String keyword,
+    int page,
+    int size,
+    String sortBy) {
 
- Employee employee =
-         employeeRepository
-         .findById(employeeId)
+ Pageable pageable =
+         PageRequest.of(
+                 page,
+                 size,
+                 Sort.by(sortBy));
+
+ Page<Task> tasks =
+         taskRepository
+         .findByTitleContainingIgnoreCase(
+                 keyword,
+                 pageable);
+
+ return tasks.map(
+         this::convertToTaskResponse);
+}
+    
+    public Page<TaskResponse>
+    searchMyTasks(
+    String keyword,
+    int page,
+    int size,
+    String sortBy) {
+
+ Authentication authentication =
+         SecurityContextHolder
+         .getContext()
+         .getAuthentication();
+
+ String username =
+         authentication.getName();
+
+ User user =
+         userRepository
+         .findByUsername(username)
          .orElseThrow(
              () -> new RuntimeException(
-                 "Employee not found"));
+                 "User not found"));
 
- List<Task> allTasks =
-         taskRepository
-         .findByAssignedEmployeeId(
-                 employeeId);
+ Pageable pageable =
+         PageRequest.of(
+                 page,
+                 size,
+                 Sort.by(sortBy));
 
- List<Task> completedTasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 employeeId,
-                 "COMPLETED");
+ Page<Task> tasks =
+	        taskRepository
+	        .findByAssignedEmployeeIdAndTitleContainingIgnoreCase(
+	                user.getId(),
+	                keyword,
+	                pageable);
 
- List<Task> pendingTasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 employeeId,
-                 "PENDING");
-
- List<Task> inProgressTasks =
-         taskRepository
-         .findByAssignedEmployeeIdAndStatus(
-                 employeeId,
-                 "IN_PROGRESS");
-
- EmployeeDashboardResponse response =
-         new EmployeeDashboardResponse();
-
- response.setEmployeeName(
-         employee.getName());
-
- response.setTotalTasks(
-         allTasks.size());
-
- response.setCompletedTasks(
-         completedTasks.size());
-
- response.setPendingTasks(
-         pendingTasks.size());
-
- response.setInProgressTasks(
-         inProgressTasks.size());
-
- response.setCompletedTaskList(
-         completedTasks.stream()
-         .map(this::convertToTaskResponse)
-         .collect(Collectors.toList()));
-
- response.setPendingTaskList(
-         pendingTasks.stream()
-         .map(this::convertToTaskResponse)
-         .collect(Collectors.toList()));
-
- response.setInProgressTaskList(
-         inProgressTasks.stream()
-         .map(this::convertToTaskResponse)
-         .collect(Collectors.toList()));
-
- return response;
+	return tasks.map(
+	        this::convertToTaskResponse);
 }
-    
-    private TaskResponse
-    convertToTaskResponse(
-    Task task) {
 
-TaskResponse response =
-        new TaskResponse();
+    private CommentResponse
+    convertToCommentResponse(
+    TaskComment comment) {
 
-response.setTitle(
-        task.getTitle());
+CommentResponse response =
+        new CommentResponse();
 
-response.setStatus(
-        task.getStatus());
+response.setComment(
+        comment.getComment());
 
-response.setTaskDuration(
-        task.getTaskDuration());
+response.setCommentedBy(
+        comment.getCommentedBy()
+        .getUsername());
+
+response.setCommentedAt(
+        comment.getCommentedAt());
 
 return response;
 }
+    
+    public List<AttachmentResponse>
+    getTaskAttachments(
+    int taskId) {
 
+ List<TaskAttachment> attachments =
+         taskAttachmentRepository
+         .findByTaskId(taskId);
+
+ return attachments.stream()
+         .map(this::convertToAttachmentResponse)
+         .toList();
+}
+    
+    private void
+    createActivity(
+    Task task,
+    User user,
+    String action) {
+
+ TaskActivity activity =
+         new TaskActivity();
+
+ activity.setTask(task);
+
+ activity.setPerformedBy(user);
+
+ activity.setAction(action);
+
+ taskActivityRepository
+         .save(activity);
+}
+    
+    public List<ActivityResponse>
+    getTaskActivities(
+    int taskId) {
+
+ List<TaskActivity> activities =
+         taskActivityRepository
+         .findByTaskIdOrderByActivityTimeDesc(
+                 taskId);
+
+ return activities.stream()
+         .map(activity -> {
+
+             ActivityResponse response =
+                     new ActivityResponse();
+
+             response.setAction(
+                     activity.getAction());
+
+             response.setPerformedBy(
+                     activity.getPerformedBy()
+                     .getUsername());
+
+             response.setActivityTime(
+                     activity.getActivityTime());
+
+             return response;
+
+         }).toList();
+}
+    
     public String deleteTask(
             int id) {
 

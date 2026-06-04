@@ -1,10 +1,19 @@
 package com.adarsh.employeemanagement.controller;
 
 import java.util.List;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import com.adarsh.employeemanagement.dto.EmployeeDateRangeAnalyticsResponse;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import com.adarsh.employeemanagement.dto.EmployeeAnalyticsResponse;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.adarsh.employeemanagement.dto.EmployeeRankingResponse;
+import com.adarsh.employeemanagement.model.enums.RankingPeriod;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -84,6 +93,71 @@ public class EmployeeController {
                 employeeService
                 .searchEmployees(name));
     }
+    
+    @GetMapping(
+            "/admin/employees/{employeeId}/analytics")
+    @PreAuthorize(
+        "hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<
+           EmployeeAnalyticsResponse>
+           getEmployeeAnalytics(
+           @PathVariable
+           int employeeId) {
+
+        return ResponseEntity.ok(
+                employeeService
+                .getEmployeeAnalytics(
+                        employeeId));
+    }
+    
+    @GetMapping(
+            "/admin/employees/ranking")
+    @PreAuthorize(
+        "hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<
+            List<EmployeeRankingResponse>>
+            getEmployeeRanking(
+            @RequestParam
+            RankingPeriod period) {
+
+        return ResponseEntity.ok(
+                employeeService
+                .getEmployeeRanking(
+                        period));
+    }
+    
+    @GetMapping(
+            "/admin/employees/{employeeId}/analytics/date-range")
+    @PreAuthorize(
+        "hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<
+            EmployeeDateRangeAnalyticsResponse>
+            getEmployeeAnalyticsByDateRange(
+
+            @PathVariable
+            int employeeId,
+
+            @RequestParam
+            @DateTimeFormat(
+                iso =
+                DateTimeFormat.ISO.DATE)
+            LocalDate startDate,
+
+            @RequestParam
+            @DateTimeFormat(
+                iso =
+                DateTimeFormat.ISO.DATE)
+            LocalDate endDate) {
+
+        return ResponseEntity.ok(
+                employeeService
+                .getEmployeeAnalyticsByDateRange(
+                        employeeId,
+                        startDate,
+                        endDate));
+    }
+    
+
 
     @DeleteMapping("/employees/{id}")
     @PreAuthorize(
